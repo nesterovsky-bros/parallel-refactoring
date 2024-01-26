@@ -16,7 +16,7 @@ At this point usually someone appears and whispers in the ear:
 
 > Look, those old technologies are proven by the time. It worth to stick to old good Cobol, or better to Assembler if you want to do the real thing.
 
-We're curious though: why is there are difference?
+We're curious though: why is there a difference?
 
 Turns out the issue lies in differences of network topology between MF and Azure solutions.
 On MF all programs, database and file storage virtually sits in a single box, thus network latency is neglible. 
