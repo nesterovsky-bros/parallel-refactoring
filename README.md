@@ -70,10 +70,76 @@ Before continuing let's consider a [code](./Services/SerialProcessor.cs#L5-L29) 
   }
 ```
 
-This is a cycle querying transactions, and doing two more small queries to get source and target accounts for each transaction.
-
-Results are printed into a report.
+This cycle queries transactions, along with two more small queries to get source and target accounts for each transaction. Results are printed into a report.
 
 If we assume query latency just 1 millisecond, and try to run such code for 100K transactions we easily come to 200+ seconds of execution. 
 
-Reality turns to be much worse.
+Reality turns to be much worse. Program spends most of its lifecycle waiting for database results, and iterations don't advance until all work of previous iterations is complete.
+
+We could do better even without trying to rewrite all code!
+Let's articulate our goals:
+
+1. To make code fast.
+2. To leave code recognizable.
+
+The idea is to form two processing pipelines:
+a) one that processes data in parallel out of order;
+b) other that processes data serially, in original order;
+
+Each pipeline may post sub-tasks to the other, so (a) runs its tasks in parallel unordered, while (b) runs its tasks as if everything was running serially.
+
+So, parallel plan would be like this:
+1. Queue parallel sub-tasks (a) for each transaction.
+2. Parallel sub-task in (a) reads source and target accounts, and queues serial sub-task (b) passing transaction and accounts.
+3. Serial sub-task (b) increments index, and writes report record.
+4. Wait for all tasks to complete.
+
+To reduce burden of task piplelines we use [Dataflow (Task Parallel Library)](https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/dataflow-task-parallel-library), and encapsulate everything in a small wrapper.
+
+Consider refactored [code](./Services/ParallelProcessor.cs#L14-L48):
+
+```C#
+  public void CreateReport(StringWriter writer)
+  {
+    using var parallel = new Parallel(options.Value.Parallelism); // 	⬅️ 1
+    var index = 0;
+
+    parallel.ForEachAsync( // 	⬅️ 2
+      dataService.
+        GetTransactions().
+        OrderBy(item => (item.At, item.SourceAccountId)),
+      transaction => // 	⬅️ 3
+      {
+        var sourceAccount = dataService.GetAccount(transaction.SourceAccountId);
+        var targetAccount = transaction.TargetAccountId != null ?
+          dataService.GetAccount(transaction.TargetAccountId) : null;
+
+        parallel.PostSync(  // 	⬅️ 4
+          (transaction, sourceAccount, targetAccount),  // 	⬅️ 5
+          data =>
+          {
+            var (transaction, sourceAccount, targetAccount) = data; // 	⬅️ 6
+
+            ++index;
+
+            if (index % 100 == 0)
+            {
+              Console.WriteLine(index);
+            }
+
+            writer.WriteLine($"{index},{transaction.Id},{
+              transaction.At},{transaction.Type},{transaction.Amount},{
+              transaction.SourceAccountId},{sourceAccount?.Name},{
+              transaction.TargetAccountId},{targetAccount?.Name}");
+          });
+      });
+  }
+```
+
+Consider ⬅️ points:
+1. We create `Parallel` utility class passing degree of parallelism requested.
+2. We iterate transactions using `parallel.ForEachAsync()`, which queue parallel sub-tasks for each transaction, and then waits until all tasks are complete.
+3. Each parallel sub-task recieve a transaction. It may be called from a different thread.
+4. Having recieved required accounts we queue a sub-task for synchronous execution using `parallel.PostSync()`, and
+5. Pass there data collected in parallel sub-task: transaction and accounts.
+6. We deconstruct data passed into variables, and then proceed with serial logic.
