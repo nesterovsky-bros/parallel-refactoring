@@ -40,7 +40,33 @@ Well, there is one. While accepting weak sides of Azure we can exploit its stron
 
 #### Parallel refactoring
 
-Before continuing let's consider a code demoing the problem:
+Before continuing let's consider a [code](./Services/SerialProcessor.cs#L5-L29) demoing the problem:
 
-[SerialProcessor.cs](./Services/SerialProcessor.cs#L5-L29)
+```C#
+  public void CreateReport(StringWriter writer)
+  {
+    var index = 0;
+
+    foreach(var transaction in dataService.
+      GetTransactions().
+      OrderBy(item => (item.At, item.SourceAccountId)))
+    {
+      var sourceAccount = dataService.GetAccount(transaction.SourceAccountId);
+      var targetAccount = transaction.TargetAccountId != null ?
+        dataService.GetAccount(transaction.TargetAccountId) : null;
+
+      ++index;
+
+      if (index % 100 == 0)
+      { 
+        Console.WriteLine(index);
+      }
+
+      writer.WriteLine($"{index},{transaction.Id},{
+        transaction.At},{transaction.Type},{transaction.Amount},{
+        transaction.SourceAccountId},{sourceAccount?.Name},{
+        transaction.TargetAccountId},{targetAccount?.Name}");
+    }
+  }
+```
 
