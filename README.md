@@ -70,3 +70,10 @@ Before continuing let's consider a [code](./Services/SerialProcessor.cs#L5-L29) 
   }
 ```
 
+This is a cycle querying transactions, and doing two more small queries to get source and target accounts for each transaction.
+
+Results are printed into a report.
+
+If we assume query latency just 1 millisecond, and try to run such code for 100K transactions we easily come to 200+ seconds of execution. 
+
+Reality turns to be much worse.
