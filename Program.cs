@@ -2,6 +2,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
 using Test.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -10,8 +11,7 @@ var configuration = builder.Configuration;
 
 services.AddSingleton<IDataService, MockDataService>();
 services.AddTransient<SerialProcessor>();
-services.Configure<ParallelProcessor.Settings>(
-  configuration.GetSection("Parallel"));
+services.Configure<ParallelProcessor.Settings>(configuration.GetSection("Parallel"));
 services.AddTransient<ParallelProcessor>();
 
 using IHost host = builder.Build();
@@ -36,6 +36,5 @@ static void Test(IReportProcessor processor)
 
   stopwatch.Stop();
 
-  Console.WriteLine(
-    $"Execution time: {stopwatch.Elapsed}");
+  Console.WriteLine($"Execution time: {stopwatch.Elapsed}");
 }

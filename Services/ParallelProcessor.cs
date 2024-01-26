@@ -13,7 +13,7 @@ public class ParallelProcessor(
 
   public void CreateReport(StringWriter writer)
   {
-    var parallel = new Parallel(options.Value.Parallelism);
+    using var parallel = new Parallel(options.Value.Parallelism);
     var index = 0;
 
     parallel.ForEachAsync(
@@ -27,18 +27,14 @@ public class ParallelProcessor(
           dataService.GetAccount(transaction.TargetAccountId) : null;
 
         parallel.PostSync(
-          (
-            transaction,
-            sourceAccount,
-            targetAccount
-          ),
+          (transaction, sourceAccount, targetAccount),
           data =>
           {
             var (transaction, sourceAccount, targetAccount) = data;
 
             ++index;
 
-            if(index % 100 == 0)
+            if (index % 100 == 0)
             {
               Console.WriteLine(index);
             }
