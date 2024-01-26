@@ -83,8 +83,8 @@ Let's articulate our goals:
 2. To leave code recognizable.
 
 The idea is to form two processing pipelines:
-a) one that processes data in parallel out of order;
-b) other that processes data serially, in original order;
+- (a) one that processes data in parallel out of order;
+- (b) other that processes data serially, in original order;
 
 Each pipeline may post sub-tasks to the other, so (a) runs its tasks in parallel unordered, while (b) runs its tasks as if everything was running serially.
 
@@ -146,7 +146,7 @@ Consider ⬅️ points:
 
 What we achieve with this refactoring:
 1. Top level query that brings transactions is done and iterated serially.
-2. But each iteration body is run in parallel. But default we set it up to allow up to 100 parallel executions.
+2. But each iteration body is run in parallel. By default we set it up to allow up to 100 parallel executions.
    All those parallel sub-task do not wait on each other so their waitings do not add up.
 3. Sync sub-tasks are queued and executed in order of their serial appearance, so increments and report records are not a subject of race conditions, nor a subject of reordering of output records.
 
