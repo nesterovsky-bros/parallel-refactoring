@@ -138,8 +138,34 @@ Consider refactored [code](./Services/ParallelProcessor.cs#L14-L48):
 
 Consider ⬅️ points:
 1. We create `Parallel` utility class passing degree of parallelism requested.
-2. We iterate transactions using `parallel.ForEachAsync()`, which queue parallel sub-tasks for each transaction, and then waits until all tasks are complete.
-3. Each parallel sub-task recieve a transaction. It may be called from a different thread.
+2. We iterate transactions using `parallel.ForEachAsync()` that queues parallel sub-tasks for each transaction, and then waits until all tasks are complete.
+3. Each parallel sub-task recieves a transaction. It may be called from a different thread.
 4. Having recieved required accounts we queue a sub-task for synchronous execution using `parallel.PostSync()`, and
 5. Pass there data collected in parallel sub-task: transaction and accounts.
 6. We deconstruct data passed into variables, and then proceed with serial logic.
+
+What we achieve with this refactoring:
+1. Top level query that brings transactions is done and iterated serially.
+2. But each iteration body is run in parallel. But default we set it up to allow up to 100 parallel executions.
+   All those parallel sub-task do not wait on each other so their waitings do not add up.
+3. Sync sub-tasks are queued and executed in order of their serial appearance, so increments and report records are not a subject of race conditions, nor a subject of reordering of output records.
+
+We think that such refactored code is still recognizible.
+
+As for performance this is what log shows:
+
+```log
+Serial test
+100
+...
+Execution time: 00:01:33.8152540
+
+Parallel test
+100
+...
+Execution time: 00:00:05.8705468
+```
+
+#### Reference
+Please take a look at project to understand implementation details, and in particular
+[`Parallel`](./Services/Parallel.cs) class implementing API to post parallel and serial tasks, run cycles and some more.
