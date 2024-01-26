@@ -42,5 +42,5 @@ Well, there is one. While accepting weak sides of Azure we can exploit its stron
 
 Before continuing let's consider a code demoing the problem:
 
-[SerialProcessor.cs](../Services/SerialProcessor.cs#L5-L29)
+[SerialProcessor.cs](./Services/SerialProcessor.cs#L5-L29)
 
