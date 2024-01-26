@@ -40,4 +40,7 @@ Well, there is one. While accepting weak sides of Azure we can exploit its stron
 
 #### Parallel refactoring
 
-...
+Before continuing let's consider a code demoing the problem:
+
+(SerialProcessor.cs)[../Services/SerialProcessor.cs#L5-L29]
+
