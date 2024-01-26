@@ -19,7 +19,7 @@ At this point usually someone appears and whispers in the ear:
 We're curious though: why is there a difference?
 
 Turns out the issue lies in differences of network topology between MF and Azure solutions.
-On MF all programs, database and file storage virtually sits in a single box, thus network latency is neglible. 
+On MF all programs, database and file storage virtually sit in a single box, thus network latency is neglible. 
 
 It's rather usual to see chatty SQL programs on MF that are doing a lot of small SQL queries.
 
