@@ -1,4 +1,4 @@
-﻿### Experience of parallel refactoring.
+﻿### Experience of parallel refactoring
 
 #### Introduction
 
