@@ -23,7 +23,7 @@ On MF all programs, database and file storage virtually sit in a single box, thu
 
 It's rather usual to see chatty SQL programs on MF that are doing a lot of small SQL queries.
 
-In Azure - programs, database, file storage are different services most certainly sitting in different phisical boxes. 
+In Azure - programs, database, file storage are different services most certainly sitting in different physical boxes. 
 You should be thankfull if they are co-located in a single datacenter. 
 So, network latency immediately becomes a factor. 
 Even if it just adds 1 millisecond per SQL roundtrip, it adds up in loops, and turns in the showstopper.
