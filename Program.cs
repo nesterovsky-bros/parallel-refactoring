@@ -33,8 +33,5 @@ static void Test(IReportProcessor processor)
   var stopwatch = Stopwatch.StartNew();
 
   processor.CreateReport(writer);
-
-  stopwatch.Stop();
-
   Console.WriteLine($"Execution time: {stopwatch.Elapsed}");
 }
