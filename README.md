@@ -86,7 +86,7 @@ The idea is to form two processing pipelines:
 - (a) one that processes data in parallel out of order;
 - (b) other that processes data serially, in original order;
 
-Each pipeline may post sub-tasks to the other, so (a) runs its tasks in parallel unordered, while (b) runs its tasks as if everything was running serially.
+Each pipeline may post sub-tasks and immutable or a copy of data to the other, so (a) runs its tasks in parallel unordered, while (b) runs its tasks as if everything was running serially.
 
 So, parallel plan would be like this:
 1. Queue parallel sub-tasks (a) for each transaction.
