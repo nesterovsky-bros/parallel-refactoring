@@ -448,7 +448,7 @@ But in many cases it's possible, and gains worth the efforts.
 While doing such refactoring you should seriously analyze whether parallel changes are permitted after all, as they cross transaction boundaries.
 In some cases that is not an option.
 
-Another point to note is that any communication between async and sync parts must be do with immutable or with copies of objects.
+Another point to note is that any communication between async and sync parts must be done with immutable object or with their copies.
 You should never forget that code parts may run in different threads in parallel, so any sharing of data must be thread safe.
 
 To avoid potential problem consider using static lambdas and passing all data as parameters.
