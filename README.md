@@ -364,7 +364,7 @@ So, each iteration pays cost of transaction.
 
 Parallel code is still much faster than serial but can we do better?
 
-Yes, we can amortize cost of transactions by processing data by chunks. We shall use LINK `Chunk()` to do it.  
+Yes, we can amortize cost of transactions by processing data by chunks. We shall use LINQ `Chunk()` to do it.  
 Consider another version of parallel [code](./Services/ParallelChunkingTransactionalProcessor.cs):
 
 ```C#
