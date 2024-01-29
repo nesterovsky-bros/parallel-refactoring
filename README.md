@@ -23,7 +23,7 @@ On MF all programs, database and file storage virtually sit in a single box, thu
 
 It's rather usual to see chatty SQL programs on MF that are doing a lot of small SQL queries.
 
-In Azure - programs, database, file storage are different services most certainly sitting in different phisical boxes. 
+In Azure - programs, database, file storage are different services most certainly sitting in different physical boxes. 
 You should be thankfull if they are co-located in a single datacenter. 
 So, network latency immediately becomes a factor. 
 Even if it just adds 1 millisecond per SQL roundtrip, it adds up in loops, and turns in the showstopper.
@@ -86,7 +86,7 @@ The idea is to form two processing pipelines:
 - (a) one that processes data in parallel out of order;
 - (b) other that processes data serially, in original order;
 
-Each pipeline may post sub-tasks to the other, so (a) runs its tasks in parallel unordered, while (b) runs its tasks as if everything was running serially.
+Each pipeline may post sub-tasks and immutable or a copy of data to the other, so (a) runs its tasks in parallel unordered, while (b) runs its tasks as if everything was running serially.
 
 So, parallel plan would be like this:
 1. Queue parallel sub-tasks (a) for each transaction.
