@@ -222,8 +222,6 @@ With simple LINQ extension [WithContext()](./Services/Extensions.cs#L15) we do j
     string? prevSourceAccountId = null;
     var subIndex = 0;
 
-    writer.WriteLine("index,subIndex,transactionId,at,type,amount,sourceAccountId,sourceName,targetAccountId,targetName");
-
     parallel.ForEachAsync(
       dataService.GetTransactions().
         OrderBy(item => (item.SourceAccountId, item.At)).
