@@ -415,7 +415,7 @@ Consider another version of parallel [code](./Services/ParallelChunkingTransacti
 Marks show:
 1. Top level transaction.
 2. Chunk data by 10 items.
-3. Iteration transaction for a chunk.
+3. Transaction is for a chunk of items.
 4. Scan items in the chunk and process.
 
 So, what is the gain. Again, we shall look at log:
