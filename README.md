@@ -350,7 +350,10 @@ Now consider [code](./Services/ParallelTransactionalProcessor.cs) for parallel r
               Console.WriteLine(index);
             }
 
-            writer.WriteLine($"{index},{transaction.Id},{transaction.At},{transaction.Type},{transaction.Amount},{transaction.SourceAccountId},{sourceAccount?.Name},{transaction.TargetAccountId},{targetAccount?.Name}");
+            writer.WriteLine($"{index},{transaction.Id},{
+              transaction.At},{transaction.Type},{transaction.Amount},{
+              transaction.SourceAccountId},{sourceAccount?.Name},{
+              transaction.TargetAccountId},{targetAccount?.Name}");
           });
       });
   }
