@@ -10,9 +10,13 @@ var services = builder.Services;
 var configuration = builder.Configuration;
 
 services.AddSingleton<IDataService, MockDataService>();
+
 services.AddTransient<SerialProcessor>();
-services.Configure<ParallelProcessor.Settings>(configuration.GetSection("Parallel"));
+services.AddTransient<SerialDependantProcessor>();
+
+services.Configure<ParallelSettings>(configuration.GetSection("Parallel"));
 services.AddTransient<ParallelProcessor>();
+services.AddTransient<ParallelDependantProcessor>();
 
 using IHost host = builder.Build();
 
@@ -24,6 +28,15 @@ Console.WriteLine();
 
 Console.WriteLine("Parallel test");
 Test(host.Services.GetRequiredService<ParallelProcessor>());
+Console.WriteLine();
+
+Console.WriteLine("Serial dependant test");
+Test(host.Services.GetRequiredService<SerialDependantProcessor>());
+Console.WriteLine();
+
+Console.WriteLine("Parallel dependant test");
+Test(host.Services.GetRequiredService<ParallelDependantProcessor>());
+Console.WriteLine();
 
 await host.StopAsync();
 

@@ -2,19 +2,14 @@
 
 namespace Test.Services;
 
-public class ParallelProcessor(
-  IDataService dataService, 
-  IOptions<ParallelProcessor.Settings> options): IReportProcessor
+public class ParallelProcessor(IDataService dataService, IOptions<ParallelSettings> options): IReportProcessor
 {
-  public record Settings
-  { 
-    public int Parallelism { get; set; }
-  }
-
   public void CreateReport(StringWriter writer)
   {
     using var parallel = new Parallel(options.Value.Parallelism);
     var index = 0;
+
+    writer.WriteLine("index,transactionId,at,type,amount,sourceAccountId,sourceName,targetAccountId,targetName");
 
     parallel.ForEachAsync(
       dataService.
