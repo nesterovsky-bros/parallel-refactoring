@@ -320,6 +320,8 @@ Right?
 Now consider [code](./Services/ParallelTransactionalProcessor.cs) for parallel refactoring:
 
 ```C#
+  public void CreateReport(StringWriter writer)
+  {
     using var parallel = new Parallel(options.Value.Parallelism);
     using var _ = dataService.CreateTransaction(); //  ⬅️ 1
     var index = 0;
