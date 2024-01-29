@@ -10,41 +10,40 @@ var services = builder.Services;
 var configuration = builder.Configuration;
 
 services.AddSingleton<IDataService, MockDataService>();
+services.Configure<ParallelSettings>(configuration.GetSection("Parallel"));
 
 services.AddTransient<SerialProcessor>();
-services.AddTransient<SerialDependantProcessor>();
-
-services.Configure<ParallelSettings>(configuration.GetSection("Parallel"));
 services.AddTransient<ParallelProcessor>();
+services.AddTransient<SerialDependantProcessor>();
 services.AddTransient<ParallelDependantProcessor>();
+services.AddTransient<SerialTransactionalProcessor>();
+services.AddTransient<SerialTransactionalProcessor>();
+services.AddTransient<ParallelTransactionalProcessor>();
+services.AddTransient<ParallelChunkingTransactionalProcessor>();
 
 using IHost host = builder.Build();
 
 await host.StartAsync();
 
-Console.WriteLine("Serial test");
 Test(host.Services.GetRequiredService<SerialProcessor>());
-Console.WriteLine();
-
-Console.WriteLine("Parallel test");
 Test(host.Services.GetRequiredService<ParallelProcessor>());
-Console.WriteLine();
-
-Console.WriteLine("Serial dependant test");
 Test(host.Services.GetRequiredService<SerialDependantProcessor>());
-Console.WriteLine();
-
-Console.WriteLine("Parallel dependant test");
 Test(host.Services.GetRequiredService<ParallelDependantProcessor>());
-Console.WriteLine();
+Test(host.Services.GetRequiredService<SerialTransactionalProcessor>());
+Test(host.Services.GetRequiredService<ParallelTransactionalProcessor>());
+Test(host.Services.GetRequiredService<ParallelChunkingTransactionalProcessor>());
 
 await host.StopAsync();
 
 static void Test(IReportProcessor processor)
 {
+  Console.WriteLine(processor.GetType().Name);
+
   var writer = new StringWriter();
   var stopwatch = Stopwatch.StartNew();
 
   processor.CreateReport(writer);
+
   Console.WriteLine($"Execution time: {stopwatch.Elapsed}");
+  Console.WriteLine();
 }

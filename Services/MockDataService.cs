@@ -34,6 +34,21 @@ public class MockDataService: IDataService
       ToList();
   }
 
+  private class MockTransaction: IDisposable
+  {
+    public void Dispose()
+    {
+      Thread.Sleep(1);
+    }
+  }
+
+  public IDisposable CreateTransaction()
+  {
+    Thread.Sleep(1);
+
+    return new MockTransaction();
+  }
+
   public Account? GetAccount(string id)
   {
     Thread.Sleep(1);

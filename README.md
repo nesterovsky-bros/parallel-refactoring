@@ -166,6 +166,109 @@ Parallel test
 Execution time: 00:00:05.8705468
 ```
 
+#### Complications
+
+Now consider a less trivial code where code in the iteration depends previous values. 
+To make iterations parallel we need to try to make the independant first. Consider the [code](./Services/SerialDependantProcessor.cs):
+
+```C#
+  public void CreateReport(StringWriter writer)
+  {
+    var index = 0;
+    string? prevSourceAccountId = null; //  ⬅️ 1
+    var subIndex = 0;
+
+    foreach(var transaction in dataService.
+      GetTransactions().
+      OrderBy(item => (item.SourceAccountId, item.At)))
+    {
+      if (transaction.SourceAccountId != prevSourceAccountId) //  ⬅️ 2
+      {
+        subIndex = 0;
+      }
+
+      var sourceAccount = dataService.GetAccount(transaction.SourceAccountId);
+      var targetAccount = transaction.TargetAccountId != null ?
+        dataService.GetAccount(transaction.TargetAccountId) : null;
+
+      ++index;
+      ++subIndex;
+
+      if (index % 100 == 0)
+      { 
+        Console.WriteLine(index);
+      }
+
+      writer.WriteLine($"{index},{subIndex},{transaction.Id},{
+        transaction.At},{transaction.Type},{transaction.Amount},{
+        transaction.SourceAccountId},{sourceAccount?.Name},{
+        transaction.TargetAccountId},{targetAccount?.Name}");
+
+      prevSourceAccountId = transaction.SourceAccountId; //  ⬅️ 3
+    }
+  }
+```
+
+Here we remember previous account, and count index withing account. In similar cases there is an easy workaround to adapt enumerable to track item and previous item.
+With primitive LINQ extension [WithContext()](./Services/Extensions.cs#L15) we do just this, so refactored [code](./Services/ParallelDependantProcessor.cs) is:
+
+```C#
+  public void CreateReport(StringWriter writer)
+  {
+    using var parallel = new Parallel(options.Value.Parallelism);
+    var index = 0;
+    string? prevSourceAccountId = null;
+    var subIndex = 0;
+
+    writer.WriteLine("index,subIndex,transactionId,at,type,amount,sourceAccountId,sourceName,targetAccountId,targetName");
+
+    parallel.ForEachAsync(
+      dataService.GetTransactions().
+        OrderBy(item => (item.SourceAccountId, item.At)).
+        WithContext(), //  ⬅️ 1
+      item =>
+      {
+        (var transaction, prevSourceAccountId) = (item.current, item.prev?.SourceAccountId); //  ⬅️ 2
+
+        if (transaction.SourceAccountId != prevSourceAccountId)  //  ⬅️ 3
+        {
+          parallel.PostSync(() =>
+          {
+            subIndex = 0;
+          });
+        }
+
+        var sourceAccount = dataService.GetAccount(transaction.SourceAccountId);
+        var targetAccount = transaction.TargetAccountId != null ?
+          dataService.GetAccount(transaction.TargetAccountId) : null;
+
+        parallel.PostSync(
+          (transaction, sourceAccount, targetAccount),
+          data =>
+          {
+            var (transaction, sourceAccount, targetAccount) = data;
+
+            ++index;
+            ++subIndex;
+
+            if (index % 100 == 0)
+            { 
+              Console.WriteLine(index);
+            }
+
+            writer.WriteLine($"{index},{subIndex},{transaction.Id},{
+              transaction.At},{transaction.Type},{transaction.Amount},{
+              transaction.SourceAccountId},{sourceAccount?.Name},{
+              transaction.TargetAccountId},{targetAccount?.Name}");
+
+            prevSourceAccountId = transaction.SourceAccountId;
+          });
+      });
+  }
+```
+
+See how we apply [WithContext()](./Services/Extensions.cs#L15), and then deconstruct `transaction` and `prevSourceAccountId` from `item`.
+
 #### Reference
 Please take a look at project to understand implementation details, and in particular
 [`Parallel`](./Services/Parallel.cs) class implementing API to post parallel and serial tasks, run cycles and some more.
