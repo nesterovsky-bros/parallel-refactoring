@@ -442,7 +442,7 @@ So, the gain is sensitive.
 #### Conclusion
 
 We're far from thinking that we can speed any code this way.  
-E.g. you cannot refactor code in the way for the second time. :-)
+E.g. you cannot refactor code using this technique twice. :-)
 But in many cases it's possible, and gains worth the efforts.
 
 While doing such refactoring you should seriously analyze whether parallel changes are permitted after all, as they cross transaction boundaries.
