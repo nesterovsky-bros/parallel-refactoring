@@ -267,7 +267,7 @@ With simple LINQ extension [WithContext()](./Services/Extensions.cs#L15) we do j
   }
 ```
 
-See we apply [WithContext()](./Services/Extensions.cs#L15), and then deconstruct `transaction` and `prevSourceAccountId` from `item`.
+See how we apply [WithContext()](./Services/Extensions.cs#L15), and then deconstruct `transaction` and `prevSourceAccountId` from `item`.
 
 Let's consider another complication that appears in such a code.
 
@@ -279,7 +279,7 @@ which you should pay for. When you wrap code into a transaction its cost is mini
 with parallel refactoring we put each iteration in a separate transaction. 
 So cost of transaction, even if it's small might raise.
 
-So, consider another serial [code](./Services/SerialTransactionalProcessor.cs) that uses a transaction:
+So, consider another serial [code](./Services/SerialTransactionalProcessor.cs) that uses transaction:
 
 ```C#
   public void CreateReport(StringWriter writer)
@@ -311,7 +311,7 @@ So, consider another serial [code](./Services/SerialTransactionalProcessor.cs) t
 ```
 
 Mark ⬅️ 1 points to a transaction resource created at start and disposed at the end.
-Let's, again, assume for the purpose of discussion it add 1 millisecond and each side.
+Let's, again, assume for the purpose of discussion it adds 1 millisecond on each side of transaction.
 
 So, just 2 milliseconds?   
 Who cares?  
