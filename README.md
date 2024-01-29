@@ -168,7 +168,7 @@ Execution time: 00:00:05.8705468
 
 #### Complications
 
-Now consider a less trivial code where code in the iteration depends previous values. 
+Now consider a less trivial code where iteration depends previous values. 
 To make iterations parallel we need to try to make the independant first. Consider the [code](./Services/SerialDependantProcessor.cs):
 
 ```C#
