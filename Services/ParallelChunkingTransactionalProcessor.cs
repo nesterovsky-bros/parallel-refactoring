@@ -40,7 +40,10 @@ public class ParallelChunkingTransactionalProcessor(IDataService dataService, IO
                 Console.WriteLine(index);
               }
 
-              writer.WriteLine($"{index},{transaction.Id},{transaction.At},{transaction.Type},{transaction.Amount},{transaction.SourceAccountId},{sourceAccount?.Name},{transaction.TargetAccountId},{targetAccount?.Name}");
+              writer.WriteLine($"{index},{transaction.Id},{
+                transaction.At},{transaction.Type},{transaction.Amount},{
+                transaction.SourceAccountId},{sourceAccount?.Name},{
+                transaction.TargetAccountId},{targetAccount?.Name}");
             });
         }
       });

@@ -155,12 +155,12 @@ We think that such refactored code is still recognizible.
 As for performance this is what log shows:
 
 ```log
-Serial test
+SerialProcessor
 100
 ...
 Execution time: 00:01:33.8152540
 
-Parallel test
+ParallelProcessor
 100
 ...
 Execution time: 00:00:05.8705468
@@ -209,8 +209,8 @@ To make iterations parallel we need to try to make the independant first. Consid
   }
 ```
 
-Here we remember previous account, and count index withing account. In similar cases there is an easy workaround to adapt enumerable to track item and previous item.
-With primitive LINQ extension [WithContext()](./Services/Extensions.cs#L15) we do just this, so refactored [code](./Services/ParallelDependantProcessor.cs) is:
+Here we remember previous account, and count index within account. In this and similar cases there is an easy workaround to track item and previous item within enumerable.
+With simple LINQ extension [WithContext()](./Services/Extensions.cs#L15) we do just this, so the refactored [code](./Services/ParallelDependantProcessor.cs) looks like:
 
 ```C#
   public void CreateReport(StringWriter writer)
@@ -267,8 +267,186 @@ With primitive LINQ extension [WithContext()](./Services/Extensions.cs#L15) we d
   }
 ```
 
-See how we apply [WithContext()](./Services/Extensions.cs#L15), and then deconstruct `transaction` and `prevSourceAccountId` from `item`.
+See we apply [WithContext()](./Services/Extensions.cs#L15), and then deconstruct `transaction` and `prevSourceAccountId` from `item`.
+
+Let's consider another complication that appears in such a code.
+
+#### Transactions
+
+Above samples are intentionally simplified to focus on the idea. 
+In reallity when you deal with the database there are (explicit or implicit) transactions, 
+which you should pay for. When you wrap code into a transaction its cost is minimal but 
+with parallel refactoring we put each iteration in a separate transaction. 
+So cost of transaction, even if it's small might raise.
+
+So, consider another serial [code](./Services/SerialTransactionalProcessor.cs) that uses a transaction:
+
+```C#
+  public void CreateReport(StringWriter writer)
+  {
+    using var _ = dataService.CreateTransaction(); //  ⬅️ 1
+    var index = 0;
+
+    foreach(var transaction in dataService.
+      GetTransactions().
+      OrderBy(item => (item.At, item.SourceAccountId)))
+    {
+      var sourceAccount = dataService.GetAccount(transaction.SourceAccountId);
+      var targetAccount = transaction.TargetAccountId != null ?
+        dataService.GetAccount(transaction.TargetAccountId) : null;
+
+      ++index;
+
+      if (index % 100 == 0)
+      { 
+        Console.WriteLine(index);
+      }
+
+      writer.WriteLine($"{index},{transaction.Id},{
+        transaction.At},{transaction.Type},{transaction.Amount},{
+        transaction.SourceAccountId},{sourceAccount?.Name},{
+        transaction.TargetAccountId},{targetAccount?.Name}");
+    }
+  }
+```
+
+Mark ⬅️ 1 points to a transaction resource created at start and disposed at the end.
+Let's, again, assume for the purpose of discussion it add 1 millisecond and each side.
+
+So, just 2 milliseconds?   
+Who cares?  
+Right?
+
+Now consider [code](./Services/ParallelTransactionalProcessor.cs) for parallel refactoring:
+
+```C#
+    using var parallel = new Parallel(options.Value.Parallelism);
+    using var _ = dataService.CreateTransaction(); //  ⬅️ 1
+    var index = 0;
+
+    parallel.ForEachAsync(
+      dataService.
+        GetTransactions().
+        OrderBy(item => (item.At, item.SourceAccountId)),
+      transaction =>
+      {
+        using var _ = dataService.CreateTransaction(); //  ⬅️ 2
+        var sourceAccount = dataService.GetAccount(transaction.SourceAccountId);
+        var targetAccount = transaction.TargetAccountId != null ?
+          dataService.GetAccount(transaction.TargetAccountId) : null;
+
+        parallel.PostSync(
+          (transaction, sourceAccount, targetAccount),
+          data =>
+          {
+            var (transaction, sourceAccount, targetAccount) = data;
+
+            ++index;
+
+            if(index % 100 == 0)
+            {
+              Console.WriteLine(index);
+            }
+
+            writer.WriteLine($"{index},{transaction.Id},{transaction.At},{transaction.Type},{transaction.Amount},{transaction.SourceAccountId},{sourceAccount?.Name},{transaction.TargetAccountId},{targetAccount?.Name}");
+          });
+      });
+  }
+```
+
+Notice transactions 1 and 2 that happen at top lelel and on each iteration.
+So, each iteration pays cost of transaction.
+
+Parallel code is still much faster than serial but can we do better?
+Yes, we can amortize cost of transactions by processing data by chunks. We shall use LINK `Chunk()` to do it.
+Consider another version of parallel [code](./Services/ParallelChunkingTransactionalProcessor.cs):
+
+```C#
+  public void CreateReport(StringWriter writer)
+  {
+    using var parallel = new Parallel(options.Value.Parallelism); //  ⬅️ 1
+    using var _ = dataService.CreateTransaction();
+    var index = 0;
+
+    parallel.ForEachAsync(
+      dataService.
+        GetTransactions().
+        OrderBy(item => (item.At, item.SourceAccountId)).
+        Chunk(10), //  ⬅️ 2
+      chunk =>
+      {
+        using var _ = dataService.CreateTransaction(); //  ⬅️ 3
+
+        foreach(var transaction in chunk) //  ⬅️ 4
+        {
+          var sourceAccount = dataService.GetAccount(transaction.SourceAccountId);
+          var targetAccount = transaction.TargetAccountId != null ?
+            dataService.GetAccount(transaction.TargetAccountId) : null;
+
+          parallel.PostSync(
+            (transaction, sourceAccount, targetAccount),
+            data =>
+            {
+              var (transaction, sourceAccount, targetAccount) = data;
+
+              ++index;
+
+              if(index % 100 == 0)
+              {
+                Console.WriteLine(index);
+              }
+
+              writer.WriteLine($"{index},{transaction.Id},{
+                transaction.At},{transaction.Type},{transaction.Amount},{
+                transaction.SourceAccountId},{sourceAccount?.Name},{
+                transaction.TargetAccountId},{targetAccount?.Name}");
+            });
+        }
+      });
+  }
+```
+
+Marks show:
+1. Top level transaction.
+2. Chunk data by 10 items.
+3. Iteration transaction for a chunk.
+4. Scan items in the chunk and process.
+
+So, what is the gain. Again, we shall look at log:
+
+```log
+SerialTransactionalProcessor
+100
+...
+Execution time: 00:01:34.8674370
+
+ParallelTransactionalProcessor
+100
+...
+Execution time: 00:00:10.7874279
+
+ParallelChunkingTransactionalProcessor
+100
+...
+Execution time: 00:00:04.9963745
+```
+
+So, the gain is sensitive.
+
+#### Conclusion
+
+We're far from thinking that any code can be sped up this way.
+E.g. you cannot speed more already refactored code. :-)
+But in many cases it's possible, and gains worth the efforts.
+
+While doing such refactoring you should seriously analyze whether parallel changes are permitted after all, as they cross transaction boundaries.
+In some cases that is not an option.
+
+Another point to note is that any communication between async and sync parts must be with immutable or with copies of objects.
+You should never forget that code parts may run in different threads in parallel, so any sharing of data must be thread safe.
+
+To avoid potential problem consider using static lambdas and passing all data as parameters.
 
 #### Reference
-Please take a look at project to understand implementation details, and in particular
+Please take a look at project to understand implem nentation details, and in particular
 [`Parallel`](./Services/Parallel.cs) class implementing API to post parallel and serial tasks, run cycles and some more.

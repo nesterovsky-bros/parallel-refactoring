@@ -36,7 +36,10 @@ public class ParallelTransactionalProcessor(IDataService dataService, IOptions<P
               Console.WriteLine(index);
             }
 
-            writer.WriteLine($"{index},{transaction.Id},{transaction.At},{transaction.Type},{transaction.Amount},{transaction.SourceAccountId},{sourceAccount?.Name},{transaction.TargetAccountId},{targetAccount?.Name}");
+            writer.WriteLine($"{index},{transaction.Id},{
+              transaction.At},{transaction.Type},{transaction.Amount},{
+              transaction.SourceAccountId},{sourceAccount?.Name},{
+              transaction.TargetAccountId},{targetAccount?.Name}");
           });
       });
   }
