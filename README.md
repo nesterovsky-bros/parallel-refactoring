@@ -418,7 +418,7 @@ Marks show:
 3. Transaction is for a chunk of items.
 4. Scan items in the chunk and process.
 
-So, what is the gain. Again, we shall look at log:
+So, what is the gain. Again, lets look at the log:
 
 ```log
 SerialTransactionalProcessor
