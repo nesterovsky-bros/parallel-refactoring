@@ -458,7 +458,7 @@ In addition, when you trade a serial execution to a parallel you trade also:
   * less network throughput to more network throughput - so, network capacity may start to be a limiting factor;
   * one database connection to multiple database connections - so, you might need to configure database connection pool;
   * less power consumption to more power consumption;
-  * simple code to more complex and fragile and code;
+  * simple code to more complex and fragile code;
   * more execution time to less execution time - which is our goal.
 
 #### Instructions
