@@ -169,7 +169,9 @@ Execution time: 00:00:05.8705468
 #### Complications
 
 Now consider a less trivial code where iteration depends previous values. 
-To make iterations parallel we need to try to make the independant first. Consider the [code](./Services/SerialDependantProcessor.cs):
+To make iterations parallel we need to try to make it independant first.
+
+Consider the [code](./Services/SerialDependantProcessor.cs):
 
 ```C#
   public void CreateReport(StringWriter writer)
@@ -220,8 +222,6 @@ With simple LINQ extension [WithContext()](./Services/Extensions.cs#L15) we do j
     string? prevSourceAccountId = null;
     var subIndex = 0;
 
-    writer.WriteLine("index,subIndex,transactionId,at,type,amount,sourceAccountId,sourceName,targetAccountId,targetName");
-
     parallel.ForEachAsync(
       dataService.GetTransactions().
         OrderBy(item => (item.SourceAccountId, item.At)).
@@ -267,7 +267,7 @@ With simple LINQ extension [WithContext()](./Services/Extensions.cs#L15) we do j
   }
 ```
 
-See we apply [WithContext()](./Services/Extensions.cs#L15), and then deconstruct `transaction` and `prevSourceAccountId` from `item`.
+See how we apply [WithContext()](./Services/Extensions.cs#L15), and then deconstruct `transaction` and `prevSourceAccountId` from `item`.
 
 Let's consider another complication that appears in such a code.
 
@@ -279,7 +279,7 @@ which you should pay for. When you wrap code into a transaction its cost is mini
 with parallel refactoring we put each iteration in a separate transaction. 
 So cost of transaction, even if it's small might raise.
 
-So, consider another serial [code](./Services/SerialTransactionalProcessor.cs) that uses a transaction:
+So, consider another serial [code](./Services/SerialTransactionalProcessor.cs) that uses transaction:
 
 ```C#
   public void CreateReport(StringWriter writer)
@@ -311,7 +311,7 @@ So, consider another serial [code](./Services/SerialTransactionalProcessor.cs) t
 ```
 
 Mark ⬅️ 1 points to a transaction resource created at start and disposed at the end.
-Let's, again, assume for the purpose of discussion it add 1 millisecond and each side.
+Let's, again, assume for the purpose of discussion it adds 1 millisecond on each side of transaction.
 
 So, just 2 milliseconds?   
 Who cares?  
@@ -320,6 +320,8 @@ Right?
 Now consider [code](./Services/ParallelTransactionalProcessor.cs) for parallel refactoring:
 
 ```C#
+  public void CreateReport(StringWriter writer)
+  {
     using var parallel = new Parallel(options.Value.Parallelism);
     using var _ = dataService.CreateTransaction(); //  ⬅️ 1
     var index = 0;
@@ -348,7 +350,10 @@ Now consider [code](./Services/ParallelTransactionalProcessor.cs) for parallel r
               Console.WriteLine(index);
             }
 
-            writer.WriteLine($"{index},{transaction.Id},{transaction.At},{transaction.Type},{transaction.Amount},{transaction.SourceAccountId},{sourceAccount?.Name},{transaction.TargetAccountId},{targetAccount?.Name}");
+            writer.WriteLine($"{index},{transaction.Id},{
+              transaction.At},{transaction.Type},{transaction.Amount},{
+              transaction.SourceAccountId},{sourceAccount?.Name},{
+              transaction.TargetAccountId},{targetAccount?.Name}");
           });
       });
   }
@@ -358,7 +363,8 @@ Notice transactions 1 and 2 that happen at top lelel and on each iteration.
 So, each iteration pays cost of transaction.
 
 Parallel code is still much faster than serial but can we do better?
-Yes, we can amortize cost of transactions by processing data by chunks. We shall use LINK `Chunk()` to do it.
+
+Yes, we can amortize cost of transactions by processing data by chunks. We shall use LINQ `Chunk()` to do it.  
 Consider another version of parallel [code](./Services/ParallelChunkingTransactionalProcessor.cs):
 
 ```C#
@@ -409,10 +415,10 @@ Consider another version of parallel [code](./Services/ParallelChunkingTransacti
 Marks show:
 1. Top level transaction.
 2. Chunk data by 10 items.
-3. Iteration transaction for a chunk.
+3. Transaction is for a chunk of items.
 4. Scan items in the chunk and process.
 
-So, what is the gain. Again, we shall look at log:
+So, what is the gain. Again, lets look at the log:
 
 ```log
 SerialTransactionalProcessor
@@ -435,17 +441,30 @@ So, the gain is sensitive.
 
 #### When to refactor
 
-We're far from thinking that we can seep any code this way.  
-E.g. you cannot speed more already refactored code. :-)
+We're far from thinking that we can speed any code this way.  
+E.g. you cannot refactor code using this technique twice. :-)  
 But in many cases it's possible, and gains worth the efforts.
 
 While doing such refactoring you should seriously analyze whether parallel changes are permitted after all, as they cross transaction boundaries.
 In some cases that is not an option.
 
+Besides, threads are a heavy tool, especially if you want to spin hundreds of them.
+
+Refactoring candidate is usually a cycle that runs many minutes. Code that completes earlier may not be able to get all benefits from parallel execution. 
+That's because the thread pool that manages threads may experience a warming effect, when it starts new threads incrementally with some delays.
+
+In addition, when you trade a serial execution to a parallel you trade also:
+  * less CPU cycles with more CPU cycles;
+  * less network throughput to more network throughput - so, network capacity may start to be a limiting factor;
+  * one database connection to multiple database connections - so, you might need to configure database connection pool;
+  * less power consumption to more power consumption;
+  * simple code to more complex and fragile and code;
+  * more execution time to less execution time - which is our goal.
+
 #### Instructions
 
-Note that communication between async and sync parts must be with immutable or with copies of objects.
-You should never forget that code parts may run in different threads in parallel, so any sharing of data must be thread safe.
+Note that communication between async and sync parts must be done with immutable object or with their copies.
+Don't forget that refactored code runs in multiple threads, so any sharing of data must be thread safe.
 
 To avoid potential problem consider using static lambdas and passing all data as parameters.
 
