@@ -352,7 +352,8 @@ public class Parallel: IDisposable
   /// if available.
   /// </param>
   /// <param name="escapes">Optional escape targets to break the step.</param>
-  public void PostAsync(Action step,
+  public void PostAsync(
+    Action step,
     bool isolated = true,
     params object[] escapes)
   {
