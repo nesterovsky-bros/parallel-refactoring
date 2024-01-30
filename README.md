@@ -463,7 +463,7 @@ In addition, when you trade a serial execution to a parallel you trade also:
 
 #### Instructions
 
-Note that communication between async and sync parts must be done with immutable object or with their copies.
+Note that communication between async and sync parts must be done with immutable objects or with their copies.
 Don't forget that refactored code runs in multiple threads, so any sharing of data must be thread safe.
 
 To avoid potential problem consider using static lambdas and passing all data as parameters.
