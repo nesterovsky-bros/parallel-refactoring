@@ -161,8 +161,8 @@ public class Parallel: IDisposable
   /// </summary>
   public void Complete()
   {
-    Volatile.Write(ref target, null);
     Volatile.Write(ref completed, true);
+    Volatile.Write(ref target, null);
 
     lock(sync)
     {
