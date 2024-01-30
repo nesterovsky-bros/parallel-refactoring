@@ -510,7 +510,6 @@ public class Parallel: IDisposable
           Label("continue");
         },
         escapes: escapes);
-
     }
 
     Join();
