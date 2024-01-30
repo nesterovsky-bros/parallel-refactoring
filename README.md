@@ -454,7 +454,7 @@ Refactoring candidate is usually a cycle that runs many minutes. Code that compl
 That's because the thread pool that manages threads may experience a warming effect, when it starts new threads incrementally with some delays.
 
 In addition, when you trade a serial execution to a parallel you trade also:
-  * less CPU cycles with more CPU cycles;
+  * less CPU cycles to more CPU cycles;
   * less network throughput to more network throughput - so, network capacity may start to be a limiting factor;
   * one database connection to multiple database connections - so, you might need to configure database connection pool;
   * less power consumption to more power consumption;
