@@ -79,7 +79,7 @@ public class Parallel: IDisposable
   /// <summary>
   /// Current goto target.
   /// </summary>
-  public object? Target => target;
+  public object? Target => Volatile.Read(ref target);
 
   /// <summary>
   /// Disposes this instance.
@@ -122,7 +122,7 @@ public class Parallel: IDisposable
       {
         ProcessSync();
 
-        Task? completionTask;
+        Task completionTask;
 
         lock(sync)
         {
@@ -161,10 +161,11 @@ public class Parallel: IDisposable
   /// </summary>
   public void Complete()
   {
+    Volatile.Write(ref target, null);
+    Volatile.Write(ref completed, true);
+
     lock(sync)
     {
-      target = null;
-      completed = true;
       states.Clear();
     }
 
@@ -174,13 +175,8 @@ public class Parallel: IDisposable
   /// <summary>
   /// Goes to a label.
   /// </summary>
-  public void Goto(object label) => PostSync(() =>
-  {
-    lock(sync)
-    {
-      target = label;
-    }
-  });
+  public void Goto(object label) => 
+    PostSync(() => Volatile.Write(ref target, label));
 
   /// <summary>
   /// Goes to return.
@@ -207,7 +203,7 @@ public class Parallel: IDisposable
   /// </summary>
   public void ProcessSync()
   {
-    if (completed || actions == null || threadState.Value != null)
+    if (Volatile.Read(ref completed) || threadState.Value != null)
     {
       return;
     }
@@ -222,7 +218,7 @@ public class Parallel: IDisposable
       {
         if (!states.TryPeek(out state))
         {
-          break;
+          return;
         }
 
         (step, refCount, state.step) = (state.step, state.refCount, null);
@@ -231,33 +227,32 @@ public class Parallel: IDisposable
         {
           if (refCount != 0)
           {
-            break;
+            return;
           }
 
           states.Dequeue();
+
+          continue;
         }
       }
 
-      if (step != null)
+      try
       {
-        try
-        {
-          step();
-        }
-        catch
-        {
-          Complete();
+        step();
+      }
+      catch
+      {
+        Complete();
 
-          throw;
-        }
-        finally
+        throw;
+      }
+      finally
+      {
+        lock(sync)
         {
-          lock(sync)
+          if (state is { step: null, refCount: 0 })
           {
-            if (state is { step: null, refCount: 0 })
-            {
-              states.TryDequeue(out state);
-            }
+            states.TryDequeue(out state);
           }
         }
       }
@@ -273,10 +268,14 @@ public class Parallel: IDisposable
   /// </returns>
   public Task AsyncCompletionTask()
   {
+    if (Volatile.Read(ref completed))
+    { 
+      return Task.CompletedTask;
+    }
+
     lock(sync)
     {
-      return completed ? Task.CompletedTask :
-        (asyncCompletionSource ??= new()).Task;
+      return (asyncCompletionSource ??= new()).Task;
     }
   }
 
@@ -287,7 +286,7 @@ public class Parallel: IDisposable
   /// <param name="label">Optional goto target label.</param>
   public void PostSync(Action step, object? label = null)
   {
-    if (completed)
+    if (Volatile.Read(ref completed))
     {
       return;
     }
@@ -308,17 +307,16 @@ public class Parallel: IDisposable
 
     void run()
     {
-      lock(sync)
-      {
-        if (target != null)
-        {
-          if (target != label)
-          {
-            return;
-          }
+      var target = Volatile.Read(ref this.target);
 
-          target = null;
+      if (target != null)
+      {
+        if (target != label)
+        {
+          return;
         }
+
+        target = null;
       }
 
       (var prev, threadState.Value) = (threadState.Value, state);
@@ -358,7 +356,7 @@ public class Parallel: IDisposable
     bool isolated = true,
     params object[] escapes)
   {
-    if (completed || MatchesTarget(escapes))
+    if (Volatile.Read(ref completed) || MatchesTarget(escapes))
     {
       return;
     }
@@ -387,7 +385,7 @@ public class Parallel: IDisposable
     {
       var acceptedTask = actions.SendAsync(() =>
       {
-        if (completed || MatchesTarget(escapes))
+        if (Volatile.Read(ref completed) || MatchesTarget(escapes))
         {
           return;
         }
@@ -487,7 +485,7 @@ public class Parallel: IDisposable
     Action<T> step,
     params object[] escapes)
   {
-    if (completed)
+    if (Volatile.Read(ref completed))
     {
       return;
     }
@@ -496,7 +494,9 @@ public class Parallel: IDisposable
 
     foreach(var item in source)
     {
-      if (completed || MatchesTarget(escapes) || MatchesTarget(defaultEscapes))
+      if (Volatile.Read(ref completed) || 
+        MatchesTarget(escapes) || 
+        MatchesTarget(defaultEscapes))
       {
         break;
       }
@@ -530,11 +530,10 @@ public class Parallel: IDisposable
       return false;
     }
 
-    lock(sync)
-    {
-      return target is "return" ||
-        target is not null && Array.IndexOf(targets, target) >= 0;
-    }
+    var target = Volatile.Read(ref this.target);
+
+    return target is "return" ||
+      target is not null && Array.IndexOf(targets, target) >= 0;
   }
 
   /// <summary>
