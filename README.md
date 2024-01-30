@@ -433,16 +433,18 @@ Execution time: 00:00:04.9963745
 
 So, the gain is sensitive.
 
-#### Conclusion
+#### When to refactor
 
-We're far from thinking that any code can be sped up this way.
+We're far from thinking that we can seep any code this way.  
 E.g. you cannot speed more already refactored code. :-)
 But in many cases it's possible, and gains worth the efforts.
 
 While doing such refactoring you should seriously analyze whether parallel changes are permitted after all, as they cross transaction boundaries.
 In some cases that is not an option.
 
-Another point to note is that any communication between async and sync parts must be with immutable or with copies of objects.
+#### Instructions
+
+Note that communication between async and sync parts must be with immutable or with copies of objects.
 You should never forget that code parts may run in different threads in parallel, so any sharing of data must be thread safe.
 
 To avoid potential problem consider using static lambdas and passing all data as parameters.
