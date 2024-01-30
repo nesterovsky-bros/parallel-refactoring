@@ -307,7 +307,7 @@ public class Parallel: IDisposable
 
     void run()
     {
-      var target = Volatile.Read(ref this.target);
+      var target = Target;
 
       if (target != null)
       {
@@ -530,7 +530,7 @@ public class Parallel: IDisposable
       return false;
     }
 
-    var target = Volatile.Read(ref this.target);
+    var target = Target;
 
     return target is "return" ||
       target is not null && Array.IndexOf(targets, target) >= 0;
