@@ -169,7 +169,7 @@ public class Parallel: IDisposable
       states.Clear();
     }
 
-    actions?.Complete();
+    actions.Complete();
   }
 
   /// <summary>
