@@ -469,5 +469,5 @@ Don't forget that refactored code runs in multiple threads, so any sharing of da
 To avoid potential problem consider using static lambdas and passing all data as parameters.
 
 #### Reference
-Please take a look at project to understand implem nentation details, and in particular
+Please take a look at project to understand implementation details, and in particular
 [`Parallel`](./Services/Parallel.cs) class implementing API to post parallel and serial tasks, run cycles and some more.
